@@ -1,0 +1,243 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+
+
+typedef struct tree{
+    int data;
+    int freq;
+    struct tree *parents;
+    struct tree *left;
+    struct tree *right;
+}queue;
+
+queue ch[100],*temp,tmp_queue[100],*root;
+
+int size=-1;
+char code[126][20],file_name[20];
+FILE *gip,*p;
+
+
+int search_code(char ary[])
+{
+    int i=0;
+    while(i<=125){
+        if(strcmp(ary,code[++i])==0){
+            return i;
+        }
+    }
+    return -1;         
+}
+
+void take_code()
+{
+    int data,i=-1;
+    char d[20];
+
+    gip=fopen("gipfile","r");
+
+    for( ; ; ){
+            fscanf(gip,"%d\t",&data);      
+
+                if(data==-1)
+                    break;              
+                    fscanf(gip,"%s",&code[data]);       
+    }
+}
+
+
+void decode()
+{
+    take_code();        
+    int i=0,value;
+    char tmp[20],k;
+
+    p=fopen("mainfile","w");
+
+    while(k!=EOF){
+        k=fgetc(gip);
+        tmp[i++]=k;
+        tmp[i]='\0';
+        if((value=search_code(tmp))!=-1){
+            fprintf(p,"%c",value);
+            i=0;
+        }
+    }
+
+    printf("\n Decode successfully done and save as \"mainfile\"\n");
+}
+
+
+void encode()
+{
+    p=fopen(file_name,"r");
+    char tmp;
+
+    while(tmp!=EOF){
+        tmp=fgetc(p);
+        fprintf(gip,"%s",code[tmp]);
+    }
+    fclose(p);
+    fclose(gip);
+
+    printf("Gip file created successfully and save as \"gipfile\"\n");
+}
+
+void print_gip()
+{
+    gip=fopen("gipfile","w");           
+
+    for(int i=0;i<=size;i++){
+        fprintf(gip,"%d %s\t",ch[i].data,code[ch[i].data]);
+    }
+        fprintf(gip,"-1\n");
+    encode();
+}
+
+
+void reverse_code(char ary[],int n,int data)
+{
+    int i=0;
+    while(n>0)
+        code[data][i++]=ary[--n];
+    code[data][i]='\0';         
+}
+
+
+
+void huffman()
+{
+    char ary[20];
+    int s=0;
+
+    for(int i=0;i<=size;i++){
+            temp=(ch+i);
+        while(temp!=root){
+            if(temp==temp->parents->left)     
+                ary[s++]='0';
+            else      
+                ary[s++]='1';
+            temp=temp->parents;
+        }
+            //k=ch[i].data;
+        reverse_code(ary,s,ch[i].data);         
+        s=0;
+    }
+}
+
+
+
+
+void queue_sort(int n)     
+{
+   int i,j,t,max;
+
+    for(i=0;i<=n;i++){
+
+            t=tmp_queue[i].freq;
+            max=i;
+        for(j=i+1;j<=n;j++){
+            if(t<tmp_queue[j].freq){
+                t=tmp_queue[j].freq;      
+                max=j;
+            }
+        }
+
+
+        tmp_queue[max].freq=tmp_queue[i].freq;         
+        tmp_queue[i].freq=t;
+
+        temp=tmp_queue[max].parents;          
+        tmp_queue[max].parents=tmp_queue[i].parents;
+        tmp_queue[i].parents=temp;
+
+    }
+}
+
+
+
+void huffman_tree()
+{
+
+    for(int i=size;i>0;i--){       
+
+        queue_sort(i);       
+
+        temp=malloc(sizeof(queue));
+            //two node assign to tree
+        temp->left=tmp_queue[i-1].parents;      
+        tmp_queue[i-1].parents->parents=temp;        
+
+        temp->right=tmp_queue[i].parents;            
+        tmp_queue[i].parents->parents=temp;
+
+        tmp_queue[i-1].freq=tmp_queue[i-1].freq+tmp_queue[i].freq;     
+        tmp_queue[i-1].parents=temp;     
+
+    }
+
+        root=temp;     
+}
+
+
+void queue()
+{
+        for(int i=0;i<=size;i++){
+            tmp_queue[i].freq=ch[i].freq;      
+            tmp_queue[i].parents=(ch+i);          
+        }
+
+         huffman_tree();        
+}
+
+
+void cnt_char()
+{
+    char d;
+    int i=0,count[126]={0};       
+    printf("Input file name ");
+    scanf("%s",file_name);
+
+    if((p=fopen(file_name,"r"))==NULL){       
+        printf("\n File doesn't exist");
+        exit(0);
+    }
+
+    while(d!=EOF){
+        d=fgetc(p);     
+            count[d]++;         
+    }
+    fclose(p);          
+
+    while(i<125){          
+        if(count[++i]!=0){
+            ch[++size].freq=count[i];      
+            ch[size].data=i;
+        }
+    }
+
+    queue();     
+}
+
+
+
+int main()
+{
+    int choise;
+
+    printf("1.Encode\n2.Decode\nSelect your option: ");
+    scanf("%d",&choise);
+
+    if(choise==1){
+        cnt_char();
+        huffman();
+        print_gip();
+    }
+    else if(choise==2){
+        decode();
+    }
+    else
+        printf("\nplease select right option: ");
+
+    return 0;
+}
